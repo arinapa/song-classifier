@@ -75,6 +75,6 @@ image_path = '../tracks/Бесконечность - Земфира.mp3'
 
 segment, sr = audio_to_array(image_path, 10, 11) 
 
-bright_spots = extract_spectrogram_and_spots(segment, sr, min_distance=100, threshold=200, verbose = True)
+bright_spots = extract_spectrogram_and_spots(segment, sr, min_distance=100, threshold=200)
 
 print(bright_spots)
