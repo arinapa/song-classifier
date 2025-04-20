@@ -29,6 +29,7 @@ cur.execute("""
     artist VARCHAR(255) NOT NULL,
     language VARCHAR(255),
     genre VARCHAR(255),
+    type VARCHAR(255),
     spectrogram_vector REAL[]  );
     """)
 conn.commit()
@@ -39,12 +40,12 @@ def get_vector(song): #создание векторов ярких точек
     return 1
 
 
-def add_new_song(conn, title, artist, language, genre, spectrogram_vector):
+def add_new_song(conn, title, artist, language, genre,type_s, spectrogram_vector):
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO songs (title, artist, language, genre, spectrogram_vector)
-        VALUES (%s, %s, %s, %s, %s);
-        """, (title, artist, language, genre, spectrogram_vector))
+        VALUES (%s, %s, %s, %s, %s, %s);
+        """, (title, artist, language, genre,type_s, spectrogram_vector))
     conn.commit()
     cur.close()
 
@@ -56,6 +57,7 @@ for index, row in df.iterrows():
     artist = row['Исполнитель']
     language = row['Язык']
     genre = row['Жанр']
+    cur_type=row['Оригинал/ кавер']
     current_vector = get_vector(title) 
-    add_new_song(conn, title, artist, language, genre, current_vector)
+    add_new_song(conn, title, artist, language, genre,cur_type, current_vector)
 conn.close()
