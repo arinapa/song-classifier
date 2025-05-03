@@ -16,5 +16,5 @@ class DataWrapper:
     def __call__(self, n: int|None = None): #TODO batch_size and augs support
         if n is None:
             indexes = list(range(len(self.dl)))
-        indexes = random.choices(range(len(self.dl)), k=n)
+        indexes = random.choices(range(len(self.dl)), k=n) # вот эта штука не должна возвращать повторяющиеся элементы
         return [self.dl[idx] for idx in indexes]
