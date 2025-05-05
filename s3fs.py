@@ -2,9 +2,9 @@ import s3fs
 import os
 
 class downloader:
-    def __init__(this, name, url, access_key, secret_key):
-        this.name = name
-        this.file = s3fs.S3FileSystem(
+    def __init__(self, name, url, access_key, secret_key):
+         self.name = name
+        self.file = s3fs.S3FileSystem(
             key=access_key,
             secret=secret_key,
             client_kwargs=url
