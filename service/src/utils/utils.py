@@ -6,7 +6,7 @@ def open_file(path):
             channels = wav_file.getnchannels()
             cnt_frames = wav_file.getnframes()
             frames = wav_file.readframes(cnt_frames)
-            numpy_array = numpy.frombuffer(frames, dtype=numpy.int16)  # Или int8, int32, в зависимости от sample_width
+            numpy_array = numpy.frombuffer(frames, dtype=numpy.int16)  
             if channels == 2:
                 numpy_array = numpy_array.reshape(-1, 2).T
             return numpy_array
