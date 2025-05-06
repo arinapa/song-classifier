@@ -1,17 +1,28 @@
 from aiogram.types import Message, ContentType
 from aiogram.filters import CommandStart, Command
 from aiogram import Router, F
+import json
+import os
 import logging
 
 import utils.keyboards as kb
 import utils.voices as v
 
+logging.basicConfig(level=logging.INFO)
+
 router = Router() #какой функцией обработать команду
 
-@router.errors_handler
-async def errors_handler(update, exception):
-    logging.error(f'Update: {update} caused error: {exception}')
-    return True
+def save_to_json(message):
+    with open('bot.json', 'r') as file:
+        all_messages=json.load (file)
+    all_messages.append(message)
+    with open('bot.json', 'w') as file:
+        json.dump(all_messages,file,ensure_ascii=False, indent=4) #сохраняем все в json
+
+@router.message() #обрабатывает каждое сообщение, чтобы его сохранить в json
+async def echo(message: Message):
+    data_text = {'user_id': message.from_user.id, 'text': message.text, 'date': message.date.isoformat()}
+    save_to_json(data_text)
 
 #обработка команд через /
 @router.message(CommandStart()) #/start
