@@ -1,7 +1,7 @@
 from dataclasses import dataclass
  
 @dataclass
-class Song:
+class Song(path):
     name: str
     artist: str
     year: int | None
