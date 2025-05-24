@@ -6,15 +6,19 @@ import json
 import os
 import logging
 
-#from service.src.model.basemodel import BaseRecognitionModel
-#from service.src.model.model1 import Model1
+from service.src.model.basemodel import BaseRecognitionModel
+from service.src.model.model1 import Model1
 from bot.create_bot import bot
 import bot.utils.keyboards as kb
 
-#BaseModel = BaseRecognitionModel('path')
+BaseModel = BaseRecognitionModel('dataset_songs.csv')
 
 logging.basicConfig(level=logging.INFO)
 router = Router() #какой функцией обработать команду
+
+def handler_audio(file_path):
+    Model = Model1(BaseModel)
+    return Model.__call__(file_path)
 
 def save_to_json(message: Message): #история запросов
     data_message = {'user_id': message.from_user.id, 'type' : message.content_type, 'text': message.text, 'date': message.date.isoformat()}
@@ -76,8 +80,8 @@ async def voice_message_handler(message: Message):
 
     save_to_json(message)
 
-    #song = handler_audio(file.file_path)
-    #await message.answer (song.name, song.artist) #возвращаем имя песни
+    song = handler_audio(file.file_path)
+    await message.answer (song.name, song.artist) #возвращаем имя песни
 
 @router.message(F.content_type == types.ContentType.AUDIO) #mp3 файлы
 async def file_message_handler(message: Message):
@@ -93,5 +97,5 @@ async def file_message_handler(message: Message):
 
     save_to_json(message)
 
-    #song = handler_audio(file.file_path)
-    #await message.answer (song.name, song.artist) #возвращаем имя песни
+    song = handler_audio(file.file_path)
+    await message.answer (song.name, song.artist) #возвращаем имя песни
