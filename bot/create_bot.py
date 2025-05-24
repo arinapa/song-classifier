@@ -1,4 +1,4 @@
 from aiogram import Bot
 
-token = '7908037638:AAHYIKclCOY4UhISLiojkkk1Tdl2GxtLlNs'
+token = 'Токен есть, но не здесь'
 bot = Bot(token)
