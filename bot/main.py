@@ -1,7 +1,7 @@
 import asyncio #ассинхронный ввод-вывод
 from aiogram import Dispatcher
-from utils.handlers import router
-from create_bot import bot
+from bot.utils.handlers import router
+from bot.create_bot import bot
 
 async def main():
     dp = Dispatcher()
