@@ -2,8 +2,7 @@ from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton)
 
 #кнопочки для красоты
 
-main = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Инфо')],
-                           [KeyboardButton(text='Что-то еще'),
-                           KeyboardButton(text='Потом будет')]], 
+main = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Распознать песню')],
+                           [KeyboardButton(text='SOS')]], 
                            resize_keyboard=True,
-                           input_field_placeholder='Выберите кнопочку...')
+                           input_field_placeholder='Выберите кнопку...')

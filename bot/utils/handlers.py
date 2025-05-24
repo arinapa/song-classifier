@@ -5,19 +5,20 @@ from pathlib import Path
 import json
 import os
 import logging
-#TODO from service.src.model.basemodel import BaseRecognitionModel
 
-from create_bot import bot
-import utils.keyboards as kb
+#from service.src.model.basemodel import BaseRecognitionModel
+#from service.src.model.model1 import Model1
+from bot.create_bot import bot
+import bot.utils.keyboards as kb
 
+#BaseModel = BaseRecognitionModel('path')
 
 logging.basicConfig(level=logging.INFO)
-
 router = Router() #какой функцией обработать команду
 
-def save_to_json(message: Message):
+def save_to_json(message: Message): #история запросов
     data_message = {'user_id': message.from_user.id, 'type' : message.content_type, 'text': message.text, 'date': message.date.isoformat()}
-    file_path = 'users_data/history.json'
+    file_path = 'bot/users_data/history.json'
     if not os.path.exists(file_path):
         all_messages = []
     else:
@@ -27,33 +28,43 @@ def save_to_json(message: Message):
     with open(file_path, 'w') as file:
         json.dump(all_messages, file, ensure_ascii = False, indent = 4) #сохраняем все в json
 
-# def handler_audio(){
-#     BaseRecognitionModel
-# }
-
 #обработка команд через /
 @router.message(CommandStart()) #/start
 async def cmd_start (message: Message):
     await message.answer ("Запуск...", reply_markup = kb.main)
 
+    await message.answer ('Телеграм-бот для идентификации трека, играющего в окружении пользователя.')
+
     save_to_json(message)
 
-@router.message(Command ('info')) #/info
+@router.message(Command ('SOS')) #/SOS
 async def cmd_info (message: Message):
-    await message.answer ('Телеграм-бот для идентификации трека, играющего в окружении пользователя.')
+    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78121234567.')
 
     save_to_json(message)
 
 #обработка команд кнопок
-@router.message(F.text == 'Инфо') #Инфо
+@router.message(F.text == 'Старт') #Старт
 async def button_info (message: Message):
-    await message.answer ('Телеграм-бот для идентификации трека, играющего в окружении пользователя.')
+    await message.answer ('Это телеграм-бот для идентификации трека, играющего в окружении пользователя.')
+
+    save_to_json(message)
+
+@router.message(F.text == 'SOS') #кнопка техподдержки (может понадобится...)
+async def button_info (message: Message):
+    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78121234567.')
+
+    save_to_json(message)
+
+@router.message(F.text == 'Распознать песню') #кнопка обработки
+async def button_info (message: Message):
+    await message.answer ('Загрузите файл в формате mp3 или запишите голосовое сообщение с песней, которую хотите распознать.')
 
     save_to_json(message)
 
 @router.message(F.content_type == types.ContentType.VOICE) #Голосовые
 async def voice_message_handler(message: Message):
-    dir = 'users_data/voice_files'
+    dir = 'bot/users_data/voice_files'
     Path(dir).mkdir(parents = True, exist_ok = True) #создадим папку
     
     voice = message.voice
@@ -61,13 +72,16 @@ async def voice_message_handler(message: Message):
     path = os.path.join(dir, f"{voice.file_id}.ogg")
 
     await bot.download_file(file_path = file.file_path, destination = path)
-    await message.answer ('Загружено!')
+    await message.answer ('Загружено! Обрабатываем трек...')
 
     save_to_json(message)
 
+    #song = handler_audio(file.file_path)
+    #await message.answer (song.name, song.artist) #возвращаем имя песни
+
 @router.message(F.content_type == types.ContentType.AUDIO) #mp3 файлы
 async def file_message_handler(message: Message):
-    dir = 'users_data/files'
+    dir = 'bot/users_data/files'
     Path(dir).mkdir(parents = True, exist_ok = True) #создадим папку
     
     audio = message.audio
@@ -75,10 +89,9 @@ async def file_message_handler(message: Message):
     path = os.path.join(dir, audio.file_name)
 
     await bot.download_file(file_path = file.file_path, destination = path)
-    await message.answer ('Загружено!')
+    await message.answer ('Загружено! Обрабатываем трек...')
 
     save_to_json(message)
 
-#@router.message() #декоратор
-#async def cmd_start (message: Message):
-#    await message.answer ("Запуск") #что делаем при получении соо
+    #song = handler_audio(file.file_path)
+    #await message.answer (song.name, song.artist) #возвращаем имя песни
