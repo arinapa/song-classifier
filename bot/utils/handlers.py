@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import os
 import logging
+from pydub import AudioSegment
 
 from service.src.model.basemodel import BaseRecognitionModel
 from service.src.model.model1 import Model1
@@ -74,13 +75,21 @@ async def voice_message_handler(message: Message):
     voice = message.voice
     file = await bot.get_file(voice.file_id)
     path = os.path.join(dir, f"{voice.file_id}.ogg")
+    mp3_path = os.path.join(dir, f"{voice.file_id}.mp3")
 
     await bot.download_file(file_path = file.file_path, destination = path)
     await message.answer ('Загружено! Обрабатываем трек...')
 
+    #Сохраняем в формате mp3
+    audio = AudioSegment.from_ogg(path)
+    audio.export(mp3_path, format="mp3")
+
+    #Удяляем файл формата ogg
+    os.remove(path)
+
     save_to_json(message)
 
-    song = handler_audio(file.file_path)
+    song = handler_audio(mp3_path)
     await message.answer (song.name, song.artist) #возвращаем имя песни
 
 @router.message(F.content_type == types.ContentType.AUDIO) #mp3 файлы
@@ -97,5 +106,5 @@ async def file_message_handler(message: Message):
 
     save_to_json(message)
 
-    song = handler_audio(file.file_path)
+    song = handler_audio(path)
     await message.answer (song.name, song.artist) #возвращаем имя песни
