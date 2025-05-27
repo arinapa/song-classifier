@@ -8,6 +8,7 @@ import logging
 from pydub import AudioSegment
 
 from service.src.model.basemodel import BaseRecognitionModel
+from service.src.model.song2 import Song
 from service.src.model.model1 import Model1
 from service.src.model.modelFAISS import ModelFAISS
 from service.src.model.shazam_windows import ShazamModelWind
@@ -20,14 +21,15 @@ logging.basicConfig(level=logging.INFO)
 router = Router() #какой функцией обработать команду
 
 def handler_audio(file_path):
-    Model = ShazamModelWind(
-        music_library_path='../Song',
-        n_neighbors=10,        
-        n_fft=1024,
-        hop_length=512,
-        pooling_steps=3,
-        window_size=10.2
-        )
+    Model = Model1(music_library_path='../Song')
+    # Model = ShazamModelWind(
+    #     music_library_path='../Song',
+    #     n_neighbors=10,        
+    #     n_fft=1024,
+    #     hop_length=512,
+    #     pooling_steps=3,
+    #     window_size=10.2
+    #     )
     return Model(file_path)
 
 def save_to_json(message: Message): #история запросов
