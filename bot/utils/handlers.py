@@ -9,17 +9,19 @@ from pydub import AudioSegment
 
 from service.src.model.basemodel import BaseRecognitionModel
 from service.src.model.model1 import Model1
+from service.src.model.modelFAISS import ModelFAISS
+# from service.src.model.shazam_windows import ShazamModelWind
 from bot.create_bot import bot
 import bot.utils.keyboards as kb
 
-BaseModel = BaseRecognitionModel('dataset_songs.csv')
+BaseModel = BaseRecognitionModel('../Песни проект')
 
 logging.basicConfig(level=logging.INFO)
 router = Router() #какой функцией обработать команду
 
 def handler_audio(file_path):
-    Model = Model1(BaseModel)
-    return Model.__call__(file_path)
+    Model = ModelFAISS('../Песни проект')
+    return Model(file_path)
 
 def save_to_json(message: Message): #история запросов
     data_message = {'user_id': message.from_user.id, 'type' : message.content_type, 'text': message.text, 'date': message.date.isoformat()}
