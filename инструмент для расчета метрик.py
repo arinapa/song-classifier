@@ -39,8 +39,7 @@ from abc import ABC, abstractmethod
 from scipy.stats import wasserstein_distance
 
 class SongFinder(ABC):
-    """Абстрактный базовый класс для поиска песен"""
-
+   
     def __init__(self, songs_path: str):
         self.songs_path = songs_path
         self.songs_db = self._build_songs_database()
@@ -54,8 +53,7 @@ class SongFinder(ABC):
         pass
 
 class SimpleSongFinder(SongFinder):
-    """Улучшенный алгоритм поиска песен по спектрограммам"""
-
+   
     def __init__(self, songs_path: str, output_dir: str = "processed_segments", debug: bool = False):
         self.output_dir = output_dir
         self.debug = debug
@@ -95,7 +93,7 @@ class SimpleSongFinder(SongFinder):
                 segment = y[i*samples_per_segment : (i+1)*samples_per_segment]
                 spec_path = os.path.join(temp_dir, f"spec_{i}.png")
 
-                # Создаем улучшенную спектрограмму
+              
                 D = librosa.stft(segment, n_fft=2048, hop_length=512, win_length=1024)
                 S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
 
@@ -105,7 +103,6 @@ class SimpleSongFinder(SongFinder):
                 plt.savefig(spec_path, bbox_inches='tight', pad_inches=0, dpi=100)
                 plt.close()
 
-                # Находим точки улучшенным методом
                 spots = self._find_bright_spots(spec_path)
                 if len(spots) >= 5:  # Только если найдено достаточно точек
                     spots_list.append(spots)
@@ -126,13 +123,11 @@ class SimpleSongFinder(SongFinder):
             if image is None:
                 return np.array([])
 
-            # Адаптивный порог с морфологическими операциями
             thresh = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                          cv2.THRESH_BINARY, 11, 2)
             kernel = np.ones((3,3), np.uint8)
             thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 
-            # Поиск контуров
             contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             spots = []
 
@@ -150,7 +145,7 @@ class SimpleSongFinder(SongFinder):
             return np.array([])
 
     def _debug_spectrogram(self, audio_data: np.ndarray, sr: int, spots: np.ndarray = None):
-        """Визуализация для отладки"""
+     
         D = librosa.stft(audio_data, n_fft=2048, hop_length=512)
         S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
 
@@ -172,11 +167,11 @@ class SimpleSongFinder(SongFinder):
         plt.show()
 
     def _improved_distance(self, features1: np.ndarray, features2: np.ndarray) -> float:
-        """Улучшенная метрика сравнения с нормализацией"""
+      
         if len(features1) < 5 or len(features2) < 5:
             return float('inf')
 
-        # Нормализация координат
+      
         def normalize(f):
             f = f.astype(np.float32)
             f[:, 0] /= 1000  # Частота
@@ -186,7 +181,7 @@ class SimpleSongFinder(SongFinder):
         f1 = normalize(features1)
         f2 = normalize(features2)
 
-        # Используем Earth Mover's Distance
+      
         min_len = min(len(f1), len(f2), 50)
         try:
             x_dist = wasserstein_distance(f1[:min_len, 0], f2[:min_len, 0])
@@ -200,11 +195,11 @@ class SimpleSongFinder(SongFinder):
         os.makedirs(temp_dir, exist_ok=True)
 
         try:
-            # Сохраняем сегмент для анализа
+           
             segment_path = os.path.join(temp_dir, "segment.wav")
             sf.write(segment_path, audio_segment, sr)
 
-            # Извлекаем особенности
+          
             query_features = self._extract_song_features(segment_path, segment_duration=3)
 
             if not query_features or len(query_features[0]) < 5:
@@ -219,7 +214,7 @@ class SimpleSongFinder(SongFinder):
                 print(f"Query features: {len(query_features[0])} points")
                 self._debug_spectrogram(audio_segment, sr, query_features[0])
 
-            # Поиск в базе данных
+           
             best_match = None
             min_distance = float('inf')
 
@@ -244,7 +239,7 @@ class SimpleSongFinder(SongFinder):
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 class MetricsAlongLibrary:
-    """Класс для оценки точности алгоритма"""
+   
 
     def __init__(self, songs_path: str, song_finder_class: Type[SongFinder], **kwargs):
         self.songs_path = songs_path
@@ -261,7 +256,7 @@ class MetricsAlongLibrary:
         correct = 0
         total = 0
 
-        # Тестируем на каждой песне
+       
         for song_file in tqdm(song_files, desc="Testing songs"):
             song_name = os.path.splitext(os.path.basename(song_file))[0]
             y, sr = librosa.load(song_file, sr=None)
@@ -269,7 +264,7 @@ class MetricsAlongLibrary:
             if len(y) < sr * segment_duration:
                 continue
 
-            # Создаем тестовые сегменты
+            
             for _ in range(test_samples):
                 start = random.randint(0, len(y) - int(segment_duration * sr))
                 segment = y[start : start + int(segment_duration * sr)]
@@ -280,27 +275,27 @@ class MetricsAlongLibrary:
                     correct += 1
                 total += 1
 
-        return correct / max(1, total)  # Избегаем деления на 0
+        return correct / max(1, total) 
 
-# Пример использования
+
 if __name__ == "__main__":
-    SONGS_PATH = "/content"  # Укажите путь к песням
+    SONGS_PATH = "/content"  
 
     if not os.path.exists(SONGS_PATH):
         os.makedirs(SONGS_PATH)
         print(f"Please upload MP3 files to {SONGS_PATH}")
     else:
-        # Проверяем доступные песни
+       
         print("Available songs:")
         for song in glob.glob(os.path.join(SONGS_PATH, "*.mp3")):
             y, sr = librosa.load(song, sr=None)
             print(f"- {os.path.basename(song)} ({len(y)/sr:.1f} sec, {sr} Hz)")
 
-        # Тестируем с визуализацией
+       
         print("\nTesting with visualization...")
         test_finder = SimpleSongFinder(SONGS_PATH, debug=True)
 
-        # Тестируем на случайной песне
+       
         song_file = random.choice(glob.glob(os.path.join(SONGS_PATH, "*.mp3")))
         y, sr = librosa.load(song_file, sr=None)
         segment = y[:int(3 * sr)]  # Берем первые 3 секунды
@@ -308,7 +303,7 @@ if __name__ == "__main__":
         result = test_finder.find_song(segment, sr)
         print(f"\nTest result: {result}")
 
-        # Полная оценка точности
+       
         print("\nCalculating full accuracy...")
         metrics = MetricsAlongLibrary(
             SONGS_PATH,
