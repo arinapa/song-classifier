@@ -1,31 +1,45 @@
 import os
 import numpy as np
 import torch
+import random
 import torchaudio
 from sklearn.neighbors import NearestNeighbors
 from transformers import ClapProcessor, ClapModel
 import joblib
+import librosa
 
 from model.song import Song
 from model.basemodel import BaseRecognitionModel  
 
+def set_seed(seed=80):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
 class CLAP_KNN_Model(BaseRecognitionModel):
-    def __init__(self, music_library_path, datadealer, n_neighbors=5):
 
-
+    def __init__(self, music_library_path, datadealer=None, n_neighbors=5, load_from=None):
         super().__init__(music_library_path)
+        set_seed(80)
 
         self.n_neighbors = n_neighbors
-
-        self.processor = ClapProcessor.from_pretrained("laion/clap-htsat-unfused")
-        self.model = ClapModel.from_pretrained("laion/clap-htsat-unfused")
-
+        self.datadealer = datadealer
+        self.knn = None
         self.embeddings = []
         self.song_paths = []
-        self.knn = None
 
-        self.datadealer = datadealer
-        self.build_index(self.music_library_path, datadealer)
+        if load_from:
+            self.load(load_from)
+            self.processor = ClapProcessor.from_pretrained("laion/clap-htsat-unfused")
+            self.model = ClapModel.from_pretrained("laion/clap-htsat-unfused")
+            self.model.eval()
+        else:
+            self.processor = ClapProcessor.from_pretrained("laion/clap-htsat-unfused")
+            self.model = ClapModel.from_pretrained("laion/clap-htsat-unfused")
+            self.model.eval()
+            self.build_index(self.music_library_path, datadealer)
 
 
     def get_audio_embeddings(self, waveform, sample_rate):
@@ -35,15 +49,25 @@ class CLAP_KNN_Model(BaseRecognitionModel):
         return embedding[0].numpy() 
 
     def get_audio_embedding(self, music_file):
-        waveform, sample_rate = torchaudio.load(music_file)
+        waveform, sample_rate = librosa.load(music_file, sr=None)
+    
+        if sample_rate != 48000:
+            print(f"Ресемплинг файла {music_file} с {sample_rate} Hz → 48000 Hz")
+            waveform = librosa.resample(waveform, orig_sr=sample_rate, target_sr=48000)
+            sample_rate = 48000  
+
         return self.get_audio_embeddings(waveform, sample_rate)
 
+
     def build_index(self, folder_path, datadealer):
-        # собираем эмбеддинги для всех аудиофайлов
+        
         self.embeddings = []
         self.song_paths = []
 
-        for index in datadealer:
+        for index,_ in datadealer:
+            if (datadealer(index) == None):
+                print("datadealer returned none")
+
             song_data, waveform, sample_rate = datadealer(index)
             emb = self.get_audio_embeddings(waveform, sample_rate)
             self.embeddings.append(emb)
