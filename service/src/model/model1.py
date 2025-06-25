@@ -15,7 +15,6 @@ class Model1(BaseRecognitionModel):
         self.music_library_path = music_library_path
 
     def extract_spectrograms(self, name: str, file_path: str, output_dir: str, segment_duration: int = 10):
-        """Извлекает спектрограммы из аудиофайла."""
         y, sr = librosa.load(file_path, sr=None)
         total_samples = len(y)
         samples_per_segment = sr * segment_duration
@@ -29,7 +28,6 @@ class Model1(BaseRecognitionModel):
             D = librosa.stft(y_segment)
             S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
 
-            # Сохраняем спектрограмму
             track_folder = os.path.join(output_dir, name)
             os.makedirs(track_folder, exist_ok=True)
             plt.figure(figsize=(10, 4))
@@ -39,7 +37,7 @@ class Model1(BaseRecognitionModel):
             plt.close()
 
     def find_bright_spots(self, image_path: str, min_distance: int = 20, threshold: int = 200) -> List[Tuple[int, int]]:
-        """Находит яркие точки на изображении."""
+       
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         _, thresh_image = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY)
         bright_spots = [(int(x), int(y)) for y, x in np.column_stack(np.where(thresh_image > 0))]
@@ -54,7 +52,7 @@ class Model1(BaseRecognitionModel):
         return filtered_bright_spots
 
     def search_threshold(self, image_path: str, min_distance: int, min_dots: int, max_dots: int) -> int:
-        """Поиск оптимального порога для ярких точек."""
+     
         min_threshold, max_threshold = 0, 255
         no_changes = 2
 
@@ -80,7 +78,7 @@ class Model1(BaseRecognitionModel):
         return (min_threshold + max_threshold) // 2
 
     def find_one_song_features(self, file_name: str) -> List[np.ndarray]:
-        """Извлекает признаки для входного аудиофайла."""
+     
         temp_dir = "temp"
         os.makedirs(temp_dir, exist_ok=True)
         self.extract_spectrograms(file_name, file_name, temp_dir, 10)
@@ -97,7 +95,7 @@ class Model1(BaseRecognitionModel):
         return spots_list
 
     def __call__(self, music_file: str) -> Song | None:
-        """Основной метод для распознавания песни."""
+      
         features = self.find_one_song_features(music_file)
 
         global_metrics = []
