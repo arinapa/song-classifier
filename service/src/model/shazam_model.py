@@ -46,7 +46,7 @@ class ShazamModel(BaseRecognitionModel):
         for index,_ in datadealer: # datadealer
             song_data, waveform, sample_rate = datadealer(index)
             song_id = index
-            song = Song(id=song_id, title=song_data['Название'], path=song_data['Название файла'])
+            song = Song(id=song_id, name=song_data['Название'], path=song_data['Название файла'])
             self.song_db[song_id] = song
             if isinstance(waveform, np.ndarray):
                 waveform = torch.from_numpy(waveform).float()
@@ -55,7 +55,7 @@ class ShazamModel(BaseRecognitionModel):
             for hash_key, occurrences in fingerprints.items():
                 self.fingerprint_db[hash_key].extend(occurrences)
                 self.song_fingerprint_counts[song_id] += len(occurrences)
-            print(f"Обработана: {song.title} (ID: {song_id}), отпечатков: {self.song_fingerprint_counts[song_id]}")
+            print(f"Обработана: {song.name} (ID: {song_id}), отпечатков: {self.song_fingerprint_counts[song_id]}")
 
     def _get_fingerprints(self, waveform: torch.Tensor, sample_rate: int, song_id: int) -> Dict[str, List[Tuple[int, int]]]:
         
@@ -173,7 +173,7 @@ class ShazamModel(BaseRecognitionModel):
             top_matches = scored_songs[:top_k]
 
             for song_id, score in top_matches:
-                print(f"Найдена песня: {self.song_db[song_id].title} (ID: {song_id}), score: {score:.2f}")
+                print(f"Найдена песня: {self.song_db[song_id].name} (ID: {song_id}), score: {score:.2f}")
 
             return [self.song_db[song_id] for song_id, _ in top_matches]
 
