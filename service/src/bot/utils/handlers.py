@@ -9,37 +9,61 @@ from pydub import AudioSegment
 from datetime import datetime
 
 from data.s3_DataDealer import S3DataDealer
-# from model.song2 import Song
 from model.song import Song
 from model.model1 import Model1
 from model.modelFAISS import ModelFAISS
-from model.shazam_windows import ShazamModelWind
+from model.shazam_model import ShazamModel
 from model.modelnn import CLAP_KNN_Model
 from bot.create_bot import bot
 import bot.utils.keyboards as kb
-
-user_model = {}
-user_number_of_songs = {}
 
 logging.basicConfig(level=logging.INFO)
 router = Router() #какой функцией обработать команду
 datadealer = S3DataDealer("songs/dataset_songs.csv")
 
+user_model = {}
+user_number_of_songs = {}
+
+models = {
+    'model_1' : Model1(music_library_path=None, datadealer=datadealer),
+    'model_2' : ModelFAISS(None, datadealer=datadealer, n_probes=5, load_from="models/model_data_FAISS.pkl"),
+    'model_3' : CLAP_KNN_Model(None, None, n_neighbors=5, load_from="models/model_data.pkl"),
+    'model_4' : ShazamModel(None, None, 2048, 256, 2, 5.0, (15, 30), 5, 1, 5, load_from="models/model_shazam.pkl" )
+}
+
 def handler_audio_main(file_path, user_id):
-    main_song = user_model[user_id](file_path)
-    main_song_name = "Не распознано"
-    if main_song:
-        main_song_name = f"Распознанная песня: {main_song.artist} {main_song.name}"
+    if user_model[user_id]=='model_1':
+        Model = models[user_model[user_id]]
+        Model.load("models/model1_data.pkl")
+        main_song = Model(file_path)
+    if user_model[user_id]=='model_4':
+        main_song = models[user_model[user_id]](file_path,1)[0]
+    else:
+        main_song = models[user_model[user_id]](file_path)
+    main_song_name = f'Распознанная песня: {main_song.artist} "{main_song.name if main_song.name else main_song.title}"'
     
     return main_song_name
 
 def handler_audio_similar(file_path, user_id):
-    similar_songs = user_model[user_id].search_by_file(file_path, top_k=user_number_of_songs[user_id])
     similar_songs_names = "Похожие песни:\n"
-    cnt=1
-    for song, dist in similar_songs:
-        similar_songs_names += f"{cnt}. {song.artist} {song.name}\n"
-        cnt+=1
+    if user_model[user_id]=='model_1':
+        similar_songs = models[user_model[user_id]].search_similar(file_path, top_k=user_number_of_songs[user_id])
+        cnt=1
+        for song, dist in similar_songs:
+            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            cnt+=1
+    elif user_model[user_id]=='model_4':
+        similar_songs = models[user_model[user_id]](file_path, top_k=user_number_of_songs[user_id])
+        cnt=1
+        for song in similar_songs:
+            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            cnt+=1
+    else:
+        similar_songs = models[user_model[user_id]].search_by_file(file_path, top_k=user_number_of_songs[user_id])
+        cnt=1
+        for song, dist in similar_songs:
+            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            cnt+=1
     return similar_songs_names
 
 def create_data_message(message: Message): #только для сообщений
@@ -105,14 +129,7 @@ async def button_info (message: types.Message):
 @router.callback_query(lambda m: m.data in ['model_1', 'model_2', 'model_3', 'model_4']) #после выбора модели
 async def process_callback (callback_query: types.CallbackQuery):
     await bot.send_message(callback_query.from_user.id, 'Отлично! Загрузите файл в формате mp3 или запишите голосовое сообщение с песней, которую хотите распознать.')
-    if callback_query.data == 'model_1':
-        user_model[callback_query.from_user.id]=Model1
-    elif callback_query.data == 'model_2':
-        user_model[callback_query.from_user.id]=ModelFAISS(None, datadealer=datadealer, n_probes=5, load_from="model_data_FAISS.pkl")
-    elif callback_query.data == 'model_3':
-        user_model[callback_query.from_user.id]=CLAP_KNN_Model(None, None, n_neighbors=5, load_from="model_data.pkl")
-    else:
-        user_model[callback_query.from_user.id]=ShazamModelWind
+    user_model[callback_query.from_user.id]=callback_query.data
     data_message = {'user_id': callback_query.from_user.id, 'type' : 'выбор модели', 'text': callback_query.data, 'date': datetime.now().isoformat()}
     save_to_json(data_message)
 
