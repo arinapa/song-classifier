@@ -8,6 +8,7 @@ main = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Распознать 
                            input_field_placeholder='Выберите кнопку...')
 
 type_model = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='простейшая модель', callback_data='model_1')],
-                           [InlineKeyboardButton(text='ускоренная модель', callback_data='model_2')],
-                             [InlineKeyboardButton(text='shazam-like модель', callback_data='model_3')]],
-                             resize_keyboard=True)
+                            [InlineKeyboardButton(text='ускоренная модель', callback_data='model_2')],
+                            [InlineKeyboardButton(text='модель "поиск соседей"', callback_data='model_3')],
+                            [InlineKeyboardButton(text='shazam-like модель', callback_data='model_4')]],
+                            resize_keyboard=True)
