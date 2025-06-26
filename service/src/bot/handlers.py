@@ -35,7 +35,6 @@ def get_response(song):
     song_info = datadealer.get_data_by_song_name(song.name if song.name else song.title)
     song_info = song_info[0]
     response = (
-        f"Распознанная песня:\n"
         f"Название: {song_info['Название']}\n"
         f"Исполнитель: {song_info['Исполнитель']}\n"
         f"Жанр: {song_info['Жанр']}\n"
@@ -53,7 +52,7 @@ def handler_audio_main(file_path, user_id):
     else:
         main_song = models[user_model[user_id]](file_path)
 
-    return get_response(main_song)
+    return f"Распознанная песня:\n{get_response(main_song)}"
 
 def handler_audio_similar(file_path, user_id):
     similar_songs_names = "Похожие песни:\n"
