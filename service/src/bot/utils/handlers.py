@@ -23,23 +23,24 @@ user_number_of_songs = {}
 
 logging.basicConfig(level=logging.INFO)
 router = Router() #какой функцией обработать команду
+datadealer = S3DataDealer("songs/dataset_songs.csv")
 
-def handler_audio(file_path, user_id):
-    if user_model[user_id]==CLAP_KNN_Model:
-        Model = user_model[user_id](None, None, n_neighbors=5, load_from="model_data.pkl")
-    else:
-        Model = user_model[user_id](music_library_path='../Song')
-    return Model(file_path)
+def handler_audio_main(file_path, user_id):
+    main_song = user_model[user_id](file_path)
+    main_song_name = "Не распознано"
+    if main_song:
+        main_song_name = f"Распознанная песня: {main_song.artist} {main_song.name}"
+    
+    return main_song_name
 
 def handler_audio_similar(file_path, user_id):
-    if user_model[user_id]==CLAP_KNN_Model:
-        Model = user_model[user_id](None, None, n_neighbors=5, load_from="model_data.pkl")
-        similar_songs, distances = Model.search_by_file(file_path, top_k=user_number_of_songs[user_id])
-        return zip(similar_songs, distances)
-    else:
-        Model = user_model[user_id](music_library_path='../Song')
-        #TODO обработка других моделей
-        return Model(file_path)
+    similar_songs = user_model[user_id].search_by_file(file_path, top_k=user_number_of_songs[user_id])
+    similar_songs_names = "Похожие песни:\n"
+    cnt=1
+    for song, dist in similar_songs:
+        similar_songs_names += f"{cnt}. {song.artist} {song.name}\n"
+        cnt+=1
+    return similar_songs_names
 
 def create_data_message(message: Message): #только для сообщений
     return {'user_id': message.from_user.id, 'type' : message.content_type, 'text': message.text, 'date': message.date.isoformat()}
@@ -65,7 +66,7 @@ async def cmd_start (message: Message):
 
 @router.message(Command ('SOS')) #/SOS
 async def cmd_info (message: Message):
-    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78121234567.')
+    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78129123456.')
 
     data_message = create_data_message(message)
     save_to_json(data_message)
@@ -80,7 +81,7 @@ async def button_start (message: Message):
 
 @router.message(F.text == 'SOS') #кнопка техподдержки (может понадобится...)
 async def button_info (message: Message):
-    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78121234567.')
+    await message.answer ('В случае неработоспособности бота обращайтесь в техподдержку по номеру +78129123456.')
 
     data_message = create_data_message(message)
     save_to_json(data_message)
@@ -107,9 +108,9 @@ async def process_callback (callback_query: types.CallbackQuery):
     if callback_query.data == 'model_1':
         user_model[callback_query.from_user.id]=Model1
     elif callback_query.data == 'model_2':
-        user_model[callback_query.from_user.id]=ModelFAISS
+        user_model[callback_query.from_user.id]=ModelFAISS(None, datadealer=datadealer, n_probes=5, load_from="model_data_FAISS.pkl")
     elif callback_query.data == 'model_3':
-        user_model[callback_query.from_user.id]=CLAP_KNN_Model
+        user_model[callback_query.from_user.id]=CLAP_KNN_Model(None, None, n_neighbors=5, load_from="model_data.pkl")
     else:
         user_model[callback_query.from_user.id]=ShazamModelWind
     data_message = {'user_id': callback_query.from_user.id, 'type' : 'выбор модели', 'text': callback_query.data, 'date': datetime.now().isoformat()}
@@ -122,24 +123,27 @@ async def voice_message_handler(message: Message):
     
     voice = message.voice
     file = await bot.get_file(voice.file_id)
-    path = os.path.join(dir, f"{voice.file_id}.ogg")
-    mp3_path = os.path.join(dir, f"{voice.file_id}.mp3")
+    ogg_path = os.path.join(dir, f"{voice.file_id}.ogg")
+    path = os.path.join(dir, f"{voice.file_id}.mp3")
 
-    await bot.download_file(file_path = file.file_path, destination = path)
+    await bot.download_file(file_path = file.file_path, destination = ogg_path)
     await message.answer ('Загружено! Обрабатываем трек... (это может занять некоторое время)')
 
     #Сохраняем в формате mp3
-    audio = AudioSegment.from_ogg(path)
-    audio.export(mp3_path, format="mp3")
+    audio = AudioSegment.from_file(ogg_path, format = "ogg")
+    audio.export(path, format="mp3")
 
     #Удяляем файл формата ogg
-    os.remove(path)
+    os.remove(ogg_path)
 
     data_message = create_data_message(message)
     save_to_json(data_message)
 
-    song = handler_audio(mp3_path, message.from_user.id)
-    await message.answer (song.name, song.artist) #возвращаем имя песни
+    main_song_name = handler_audio_main(path, message.from_user.id)
+    await message.answer (main_song_name) #возвращаем имя песни
+    
+    similar_songs_names = handler_audio_similar(path, message.from_user.id)
+    await message.answer (similar_songs_names)
 
 @router.message(F.content_type == types.ContentType.AUDIO) #mp3 файлы
 async def file_message_handler(message: Message):
@@ -156,21 +160,10 @@ async def file_message_handler(message: Message):
     data_message = create_data_message(message)
     save_to_json(data_message)
 
-    main_song = handler_audio(path, message.from_user.id)
-    main_song_name = "Не распознано"
-    if main_song:
-        main_song_name = f"Распознанная песня: {main_song.path}"
+    main_song_name = handler_audio_main(path, message.from_user.id)
     await message.answer (main_song_name) #возвращаем имя песни
     
-    similar_songs = handler_audio_similar(path, message.from_user.id)
-    similar_songs_names = "Похожие песни:\n"
-    # print("Похожие песни:")
-    cnt=1
-    for song, dist in similar_songs:
-        similar_songs_names += f"{cnt}. {song['Название файла']}   расстояние: {dist:.4f}\n"
-        cnt+=1
-        # print(f"- {song['Название файла']} (расстояние: {dist:.4f})")
-    
+    similar_songs_names = handler_audio_similar(path, message.from_user.id)
     await message.answer (similar_songs_names)
 
 @router.message()  # обработка для всех остальных сообщений
