@@ -1,34 +1,44 @@
 import pandas
 import io
+import re
 import csv
 import librosa
 import numpy as np
 import boto3 
-from base_DataDealer import BaseDataDealer
-from s3_config import ACCESS_KEY, SECRET_KEY, ENDPOINT_URL, REGION_NAME
+from data.base_DataDealer import BaseDataDealer
+from data.s3_config import ACCESS_KEY, SECRET_KEY, ENDPOINT_URL, REGION_NAME
+
 class S3DataDealer(BaseDataDealer):
     def __init__(self, csv_path):
         creds = {
-            'access_key':ACCESS_KEY,
+            'access_key': ACCESS_KEY,
             'secret_key': SECRET_KEY
         }
         super().__init__(csv_path, credits=creds)
         self.endpoint_url = ENDPOINT_URL
         self.region_name = REGION_NAME
-        session = boto3.session.Session()
-        self.s3_client = session.client(
-            service_name='s3',
-            endpoint_url=self.endpoint_url,
-            region_name=self.region_name,
-            aws_access_key_id=self.creds.get('access_key'),
-            aws_secret_access_key=self.creds.get('secret_key')
-        )
-        bucket_name, csv_name= self.path.split('/', 1)
-        self.bucket_name=bucket_name
-        obj = self.s3_client.get_object(Bucket=bucket_name, Key=csv_name) 
-        csv_stream = io.BytesIO(obj['Body'].read())
-        self.media_data = pandas.read_csv(csv_stream) 
-        self.media_data.columns = self.media_data.columns.str.strip()
+        try:
+            session = boto3.session.Session()
+            self.s3_client = session.client(
+                service_name='s3',
+                endpoint_url=self.endpoint_url,
+                region_name=self.region_name,
+                aws_access_key_id=self.creds.get('access_key'),
+                aws_secret_access_key=self.creds.get('secret_key')
+            )
+            
+            bucket_name, csv_name = self.path.split('/', 1)
+            self.bucket_name = bucket_name
+            if not self.s3_client.list_objects_v2(Bucket=bucket_name, Prefix=csv_name).get('KeyCount', 0):
+                raise ValueError(f"CSV файл не найден на s3")
+            obj = self.s3_client.get_object(Bucket=bucket_name, Key=csv_name)
+            csv_stream = io.BytesIO(obj['Body'].read())
+            self.media_data = pandas.read_csv(csv_stream)
+            self.media_data.columns = self.media_data.columns.str.strip()
+        except Exception as e:
+            print(f"S3DataDealer не подключился к s3: {str(e)}")
+            raise
+
     def __getitem__(self, index):
         if self.media_data is None:
             return None
@@ -55,16 +65,28 @@ class S3DataDealer(BaseDataDealer):
             return current_song['Название файла'].iloc[0]
         return None
 
-    def call(self, song_id):    
-        song_data = self.media_data.iloc[song_id].to_dict()
-        key = song_data.get('Название файла')    
-        key = key.strip().strip('"').strip('“”')
-        check = self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=key)
-        obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
-        body = obj['Body'].read()
-        audio_stream = io.BytesIO(body)
-        waveform, sr = librosa.load(audio_stream, sr=None)
-        return waveform
+    def __call__(self, song_id):    
+        try:
+            song_data = self.media_data.loc[song_id].to_dict()
+            key = str(song_data.get('Название файла', '')).strip()
+            key = re.sub(r'^["\']|["\']$', '', key) 
+            check = self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=key)
+            if check.get('KeyCount', 0) == 0:
+                print(f"Файл не найден в S3: {key}")
+                return None
+            obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
+            body = obj['Body'].read()
+            audio_stream = io.BytesIO(body)
+            waveform, sr = librosa.load(audio_stream, sr=None) 
     
-
-
+            if sr != 48000: #ресемплинг частоты (выдавало ошибку)
+                print(f"Ресемплинг с {sr} Гц до {48000} Гц")
+                waveform = librosa.resample(waveform, orig_sr=sr, target_sr=48000)
+                sr = 48000        
+            return song_data, waveform, sr    
+        except KeyError as e:
+            print(f"Ошибка доступа к песне {song_id}: {str(e)}")
+            return None
+        except self.s3_client.exceptions.NoSuchKey:
+            print(f"Файл не найден в S3: {key}")
+            return None
