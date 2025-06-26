@@ -80,12 +80,13 @@ class CLAP_KNN_Model(BaseRecognitionModel):
     def __call__(self, music_file) -> Song | None:
         if not self.knn:
             return None
-
         try:
             query_emb = self.get_audio_embedding(music_file).reshape(1, -1)
             distances, indices = self.knn.kneighbors(query_emb, n_neighbors=1)
             best_match_path = self.song_paths[indices[0][0]]
-            return Song(path=best_match_path['Название файла']) 
+            artist=best_match_path.get("Исполнитель", "Unknown")
+            title = best_match_path.get("Название", "Unknown") 
+            return Song(path=f"{artist}_{title}", name=title, artist=artist)
         except Exception as e:
             print(f"Error during song recognition: {e}")
             return None
@@ -93,7 +94,19 @@ class CLAP_KNN_Model(BaseRecognitionModel):
     def search_by_file(self, query_path, top_k=5):
         query_emb = self.get_audio_embedding(query_path).reshape(1, -1)
         distances, indices = self.knn.kneighbors(query_emb, n_neighbors=top_k)
-        return [self.song_paths[i] for i in indices[0]], distances[0]
+        
+        results = []
+        for i in range(top_k):
+            if indices[0][i] >= 0:
+                song_id = self.song_paths[indices[0][i]]
+                artist = song_id.get("Исполнитель", "Unknown")
+                title = song_id.get("Название", "Unknown")
+                results.append((
+                    Song(path=f"{artist}_{title}", name=title, artist=artist),
+                    distances[0][i]
+                ))
+        return results
+
 
     def save(self, path):
         joblib.dump((self.knn, self.embeddings, self.song_paths), path)
