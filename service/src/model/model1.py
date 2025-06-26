@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pickle
 from tqdm.auto import tqdm
 from typing import List, Optional, Tuple, Dict
-from model.song import Song
+from data.song import Song
 from model.basemodel import BaseRecognitionModel
 
 class Model1(BaseRecognitionModel):
