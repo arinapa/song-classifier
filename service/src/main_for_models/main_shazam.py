@@ -15,6 +15,6 @@ result = model(query_file, top_k=10)
 
 if result:
     for song in result:
-        print(f"Похожая песня: {song.title} — {song.path}") # ну или название можно выводить
+        print(f"Похожая песня: {song.name} — {song.path}") # ну или название можно выводить
 else:
     print("Не распознано")
