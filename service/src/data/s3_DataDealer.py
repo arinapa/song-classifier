@@ -5,8 +5,8 @@ import csv
 import librosa
 import numpy as np
 import boto3 
-from data.base_DataDealer import BaseDataDealer
-from data.s3_config import ACCESS_KEY, SECRET_KEY, ENDPOINT_URL, REGION_NAME
+from base_DataDealer import BaseDataDealer
+from s3_config import ACCESS_KEY, SECRET_KEY, ENDPOINT_URL, REGION_NAME
 
 class S3DataDealer(BaseDataDealer):
     def __init__(self, csv_path):
@@ -89,4 +89,23 @@ class S3DataDealer(BaseDataDealer):
             return None
         except self.s3_client.exceptions.NoSuchKey:
             print(f"Файл не найден в S3: {key}")
+            return None
+    def get_data_by_song_name(self, song_name, artist=None):
+        if self.media_data is None:
+            return None    
+        try:
+            self.media_data.columns = self.media_data.columns.str.strip()        
+            mask = self.media_data['Название'].str.lower().str.contains(song_name.lower(), regex=False, na=False)    
+            if artist:
+                artist_mask = self.media_data['Исполнитель'].str.lower().str.contains(artist.lower(), regex=False, na=False)
+                mask = mask & artist_mask
+            found_songs = self.media_data[mask]    
+            if not found_songs.empty:
+                return found_songs.to_dict('records')
+            return None     
+        except KeyError as e:
+            print(f"Ошибка {str(e)}")
+            return None
+        except Exception as e:
+            print(f"Ошибка {str(e)}")
             return None
