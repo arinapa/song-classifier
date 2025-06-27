@@ -31,6 +31,17 @@ models = {
     'model_4' : ShazamModel(None, None, 2048, 256, 2, 5.0, (15, 30), 5, 1, 5, load_from="models/model_shazam.pkl" )
 }
 
+def get_response(song):
+    song_info = datadealer.get_data_by_song_name(song.name if song.name else song.title)
+    song_info = song_info[0]
+    response = (
+        f"Название: {song_info['Название']}\n"
+        f"Исполнитель: {song_info['Исполнитель']}\n"
+        f"Жанр: {song_info['Жанр']}\n"
+        f"Язык: {song_info['Язык']}"
+    )
+    return response
+
 def handler_audio_main(file_path, user_id):
     if user_model[user_id]=='model_1':
         Model = models[user_model[user_id]]
@@ -40,9 +51,8 @@ def handler_audio_main(file_path, user_id):
         main_song = models[user_model[user_id]](file_path,1)[0]
     else:
         main_song = models[user_model[user_id]](file_path)
-    main_song_name = f'Распознанная песня: {main_song.artist} "{main_song.name if main_song.name else main_song.title}"'
-    
-    return main_song_name
+
+    return f"Распознанная песня:\n{get_response(main_song)}"
 
 def handler_audio_similar(file_path, user_id):
     similar_songs_names = "Похожие песни:\n"
@@ -50,19 +60,19 @@ def handler_audio_similar(file_path, user_id):
         similar_songs = models[user_model[user_id]].search_similar(file_path, top_k=user_number_of_songs[user_id])
         cnt=1
         for song, dist in similar_songs:
-            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            similar_songs_names += f"Номер: {cnt}\n{get_response (song)}\n\n"
             cnt+=1
     elif user_model[user_id]=='model_4':
         similar_songs = models[user_model[user_id]](file_path, top_k=user_number_of_songs[user_id])
         cnt=1
         for song in similar_songs:
-            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            similar_songs_names += f"Номер: {cnt}\n{get_response (song)}\n\n"
             cnt+=1
     else:
         similar_songs = models[user_model[user_id]].search_by_file(file_path, top_k=user_number_of_songs[user_id])
         cnt=1
         for song, dist in similar_songs:
-            similar_songs_names += f'{cnt}. {song.artist} "{song.name if song.name else song.title}"\n'
+            similar_songs_names += f"Номер: {cnt}\n{get_response (song)}\n\n"
             cnt+=1
     return similar_songs_names
 
