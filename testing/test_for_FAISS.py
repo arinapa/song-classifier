@@ -1,5 +1,5 @@
 import os
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # Добавьте это перед другими импортами
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  
 import sys
 import time
 import numpy as np
@@ -43,7 +43,7 @@ def test_model_params(test_data: list, noisy_test_data: list):
         search_time_total += (t1 - t0)
         print(f"Ищем: {file_path}")
         if results:
-            song, distance = results[0]  # Получаем первый (и единственный) результат
+            song, distance = results[0]  
             print(f"Найдено: {song.path} (расстояние: {distance:.2f})")
             print(f"Время поиска: {t1 - t0:.2f} сек")
         else:
